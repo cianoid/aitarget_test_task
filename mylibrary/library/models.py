@@ -4,7 +4,15 @@ from django.db import models
 User = get_user_model()
 
 
-class Author(models.Model):
+class CreatedModel(models.Model):
+    created = models.DateTimeField(
+        verbose_name='Дата создания', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+class Author(CreatedModel):
     last_name = models.CharField('Фамилия', max_length=150)
     first_name = models.CharField('Имя', max_length=150)
     middle_name = models.CharField('Отчество', max_length=150, blank=True)
@@ -13,14 +21,14 @@ class Author(models.Model):
         return f'{self.first_name} {self.middle_name} {self.last_name}'
 
 
-class Language(models.Model):
+class Language(CreatedModel):
     name = models.CharField('Язык', max_length=50)
 
     def __str__(self):
         return self.name
 
 
-class Book(models.Model):
+class Book(CreatedModel):
     author = models.ForeignKey(
         Author, verbose_name='Автор книги', on_delete=models.CASCADE,
         related_name='books')
@@ -34,7 +42,7 @@ class Book(models.Model):
         return f'{self.name}, {self.publication_year}'
 
 
-class Follow(models.Model):
+class Follow(CreatedModel):
     user = models.ForeignKey(
         User, related_name='followings', on_delete=models.CASCADE,
         verbose_name='Подписчик')
