@@ -1,4 +1,7 @@
+from django.contrib.auth import get_user_model
 from django.db import models
+
+User = get_user_model()
 
 
 class Author(models.Model):
@@ -29,3 +32,15 @@ class Book(models.Model):
 
     def __str__(self):
         return f'{self.name}, {self.publication_year}'
+
+
+class Follow(models.Model):
+    user = models.ForeignKey(
+        User, related_name='followings', on_delete=models.CASCADE,
+        verbose_name='Подписчик')
+    author = models.ForeignKey(
+        Author, related_name='followers', on_delete=models.CASCADE,
+        verbose_name='Автор')
+
+    class Meta:
+        unique_together = ('user', 'author')
