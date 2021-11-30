@@ -31,7 +31,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users',
     'library',
-    'djoser'
+    'api',
+    'djoser',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
