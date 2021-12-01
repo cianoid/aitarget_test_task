@@ -26,4 +26,4 @@ class FollowViewSet(viewsets.ModelViewSet):
 class LanguageViewSet(viewsets.ModelViewSet):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [AdminWriteAccessPermission]
