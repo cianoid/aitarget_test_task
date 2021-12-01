@@ -8,23 +8,25 @@ User = get_user_model()
 
 class AuthorSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = '__all__'
+        exclude = ['created']
         model = Author
+
+
+class LanguageSerializer(serializers.ModelSerializer):
+    class Meta:
+        exclude = ['created']
+        model = Language
 
 
 class BookSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = '__all__'
+        exclude = ['created']
         model = Book
 
 
 class FollowSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = '__all__'
+        exclude = ['created']
         model = Follow
 
 
-class LanguageSerializer(serializers.ModelSerializer):
-    class Meta:
-        fields = '__all__'
-        model = Language
