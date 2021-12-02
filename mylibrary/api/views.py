@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from rest_framework import viewsets, permissions
 
 from api.permissions import AdminWriteAccessPermission
@@ -18,6 +20,12 @@ class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     permission_classes = [AdminWriteAccessPermission,
                           permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Book.objects.all()
+
+        return Book.objects.filter(publication_year__lte=datetime.now().year)
 
 
 class FollowViewSet(viewsets.ModelViewSet):
