@@ -1,8 +1,9 @@
+from datetime import datetime
+
 from rest_framework import status
 from rest_framework.reverse import reverse
 from django.urls import include, path
 from rest_framework.test import APITestCase, URLPatternsTestCase, APIClient
-from rest_framework.authtoken.models import Token
 
 from django.contrib.auth import get_user_model
 
@@ -32,6 +33,8 @@ class APITests(APITestCase, URLPatternsTestCase):
     languages_count: int
     authors_count: int
     books_count: int
+    books_count_for_user: int
+    books_count_for_staff: int
 
     staff: User
     staff_login = 'admin'
@@ -74,6 +77,9 @@ class APITests(APITestCase, URLPatternsTestCase):
         cls.book_ru_from_future = Book.objects.create(
             name='Про космос', publication_year=2025, language=cls.lang_ru,
             author=cls.author_ru)
+        cls.books_count_for_user = Book.objects.filter(
+            publication_year__lte=datetime.now().year).count()
+        cls.books_count_for_staff = Book.objects.all().count()
         cls.books_count = Book.objects.all().count()
 
         cls.user = User.objects.create_user(cls.user_login, cls.user_password)
@@ -142,6 +148,8 @@ class APITests(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Language.objects.count(), self.languages_count + 1)
 
+        Language.objects.filter(name=data['name']).delete()
+
     def test_staff_can_partial_update_language(self):
         language = Language.objects.create(name='Китайкий')
 
@@ -151,7 +159,6 @@ class APITests(APITestCase, URLPatternsTestCase):
         response = self.staff_client.patch(url, data=data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Language.objects.count(), self.languages_count+1)
         self.assertEqual(
             Language.objects.get(pk=language.pk).name, data['name'])
 
@@ -166,14 +173,13 @@ class APITests(APITestCase, URLPatternsTestCase):
         response = self.staff_client.put(url, data=data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Language.objects.count(), self.languages_count+1)
         self.assertEqual(
             Language.objects.get(pk=language.pk).name, data['name'])
 
         language.delete()
 
     def test_staff_can_delete_language(self):
-        language = Language.objects.create(name='Китайкий')
+        language = Language.objects.create(name='Китасйкий')
 
         url = reverse('api:languages-detail', args=[language.pk])
 
@@ -185,13 +191,72 @@ class APITests(APITestCase, URLPatternsTestCase):
 
         language.delete()
 
+    def test_user_can_read_language(self):
+        url = reverse('api:languages-detail', args=[self.lang_ru.pk])
+        response = self.user_client.get(url)
 
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], self.lang_ru.name)
 
-    def test_anon_cant_access_author(self):
-        url_list = reverse('api:authors-list')
-        url_detail = reverse('api:authors-detail', args=[self.author_ru.pk])
+    def test_user_can_list_language(self):
+        url = reverse('api:languages-list')
+        response = self.user_client.get(url)
 
-        return self.anon_access(url_list, url_detail)
+        item = response.data[1]
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            Language.objects.get(pk=item['id']).name, item['name'])
+
+    def test_user_cant_create_language(self):
+        url = reverse('api:languages-list')
+        data = {'name': 'Иврит'}
+
+        response = self.user_client.post(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Language.objects.count(), self.languages_count)
+
+    def test_user_cant_partial_update_language(self):
+        language = Language.objects.create(name='Китайкий')
+
+        url = reverse('api:languages-detail', args=[language.pk])
+        data = {'name': 'Китайский'}
+
+        response = self.user_client.patch(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotEqual(
+            Language.objects.get(pk=language.pk).name, data['name'])
+
+        language.delete()
+
+    def test_user_cant_update_language(self):
+        language = Language.objects.create(name='Китайкий')
+
+        url = reverse('api:languages-detail', args=[language.pk])
+        data = {'name': 'Китайский'}
+
+        response = self.user_client.put(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotEqual(
+            Language.objects.get(pk=language.pk).name, data['name'])
+
+        language.delete()
+
+    def test_user_cant_delete_language(self):
+        language = Language.objects.create(name='Китайский')
+
+        url = reverse('api:languages-detail', args=[language.pk])
+
+        response = self.user_client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Language.objects.count(), self.languages_count + 1)
+        self.assertEqual(Language.objects.filter(pk=language.pk).count(), 1)
+
+        language.delete()
 
     def test_anon_cant_access_book(self):
         url_list = reverse('api:books-list')
@@ -199,3 +264,168 @@ class APITests(APITestCase, URLPatternsTestCase):
 
         return self.anon_access(url_list, url_detail)
 
+    def test_staff_can_read_book(self):
+        url = reverse('api:books-detail', args=[self.book_ru.pk])
+        response = self.staff_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], self.book_ru.name)
+
+    def test_staff_can_list_book(self):
+        url = reverse('api:books-list')
+        response = self.staff_client.get(url)
+
+        item = response.data[1]
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), self.books_count_for_staff)
+        self.assertEqual(
+            Book.objects.get(pk=item['id']).name, item['name'])
+
+    def test_staff_can_create_book(self):
+        url = reverse('api:books-list')
+        data = {'name': 'Власть тьмы', 'publication_year': 1887,
+                'author': self.author_ru.pk, 'language': self.lang_ru.pk}
+
+        response = self.staff_client.post(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Book.objects.count(), self.books_count + 1)
+
+        Book.objects.get(name=data['name']).delete()
+
+    def test_staff_can_partial_update_book(self):
+        book = Book.objects.create(
+            name='Влаь тьмы', publication_year=1887, author=self.author_ru,
+            language=self.lang_ru)
+
+        url = reverse('api:books-detail', args=[book.pk])
+        data = {'name': 'Власть тьмы'}
+
+        response = self.staff_client.patch(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            Book.objects.get(pk=book.pk).name, data['name'])
+
+        book.delete()
+
+    def test_staff_can_update_book(self):
+        book_data = {'name': 'Влаь тьмы', 'publication_year': 1887}
+
+        book = Book.objects.create(
+            author=self.author_ru, language=self.lang_ru, **book_data)
+
+        url = reverse('api:books-detail', args=[book.pk])
+
+        data = book_data
+        data['name'] = 'Власть тьмы'
+        data.update({'author': self.author_ru.pk, 'language': self.lang_ru.pk})
+
+        response = self.staff_client.put(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            Book.objects.get(pk=book.pk).name, data['name'])
+
+        book.delete()
+
+    def test_staff_can_delete_book(self):
+        book = Book.objects.create(
+            name='Влаь тьмы', publication_year=1887, author=self.author_ru,
+            language=self.lang_ru)
+
+        url = reverse('api:books-detail', args=[book.pk])
+
+        response = self.staff_client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Book.objects.count(), self.books_count)
+        self.assertEqual(Book.objects.filter(pk=book.pk).count(), 0)
+
+        book.delete()
+
+    def test_user_can_read_book(self):
+        url = reverse('api:books-detail', args=[self.book_ru.pk])
+        response = self.user_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], self.book_ru.name)
+
+    def test_user_can_list_book(self):
+        url = reverse('api:books-list')
+        response = self.user_client.get(url)
+
+        item = response.data[1]
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), self.books_count_for_user)
+        self.assertEqual(
+            Book.objects.get(pk=item['id']).name, item['name'])
+
+    def test_user_cant_create_book(self):
+        url = reverse('api:books-list')
+        data = {'name': 'Власть тьмы', 'publication_year': 1887,
+                'author': self.author_ru.pk, 'language': self.lang_ru.pk}
+
+        response = self.user_client.post(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Book.objects.count(), self.books_count)
+
+    def test_user_cant_partial_update_book(self):
+        book = Book.objects.create(
+            name='Влаь тьмы', publication_year=1887, author=self.author_ru,
+            language=self.lang_ru)
+
+        url = reverse('api:books-detail', args=[book.pk])
+        data = {'name': 'Власть тьмы'}
+
+        response = self.user_client.patch(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotEqual(
+            Book.objects.get(pk=book.pk).name, data['name'])
+
+        book.delete()
+
+    def test_user_cant_update_book(self):
+        book_data = {'name': 'Влаь тьмы', 'publication_year': 1887}
+
+        book = Book.objects.create(
+            author=self.author_ru, language=self.lang_ru, **book_data)
+
+        url = reverse('api:books-detail', args=[book.pk])
+
+        data = book_data
+        data['name'] = 'Власть тьмы'
+        data.update({'author': self.author_ru.pk, 'language': self.lang_ru.pk})
+
+        response = self.user_client.put(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotEqual(
+            Book.objects.get(pk=book.pk).name, data['name'])
+
+        book.delete()
+
+    def test_user_cant_delete_book(self):
+        book = Book.objects.create(
+            name='Влаь тьмы', publication_year=1887, author=self.author_ru,
+            language=self.lang_ru)
+
+        url = reverse('api:books-detail', args=[book.pk])
+
+        response = self.user_client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Book.objects.count(), self.books_count + 1)
+        self.assertEqual(Book.objects.filter(pk=book.pk).count(), 1)
+
+        book.delete()
+
+    def test_anon_cant_access_author(self):
+        url_list = reverse('api:authors-list')
+        url_detail = reverse('api:authors-detail', args=[self.author_ru.pk])
+
+        return self.anon_access(url_list, url_detail)
