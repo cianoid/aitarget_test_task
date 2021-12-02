@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'api',
     'djoser',
     'drf_yasg',
+    'rest_framework'
 ]
 
 MIDDLEWARE = [
