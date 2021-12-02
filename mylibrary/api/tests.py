@@ -48,6 +48,12 @@ class APITests(APITestCase, URLPatternsTestCase):
     user_email = 'user@example.com'
     user_client: APIClient
 
+    test_author_data = {
+        'first_name': 'Федор',
+        'middle_name': 'Михайлович',
+        'last_name': 'Достоевский'
+    }
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -265,11 +271,11 @@ class APITests(APITestCase, URLPatternsTestCase):
         return self.anon_access(url_list, url_detail)
 
     def test_staff_can_read_book(self):
-        url = reverse('api:books-detail', args=[self.book_ru.pk])
+        url = reverse('api:books-detail', args=[self.book_ru_from_future.pk])
         response = self.staff_client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['name'], self.book_ru.name)
+        self.assertEqual(response.data['name'], self.book_ru_from_future.name)
 
     def test_staff_can_list_book(self):
         url = reverse('api:books-list')
@@ -352,6 +358,12 @@ class APITests(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], self.book_ru.name)
 
+    def test_user_cant_read_book_from_future(self):
+        url = reverse('api:books-detail', args=[self.book_ru_from_future.pk])
+        response = self.user_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_user_can_list_book(self):
         url = reverse('api:books-list')
         response = self.user_client.get(url)
@@ -429,3 +441,139 @@ class APITests(APITestCase, URLPatternsTestCase):
         url_detail = reverse('api:authors-detail', args=[self.author_ru.pk])
 
         return self.anon_access(url_list, url_detail)
+
+    def test_staff_can_read_author(self):
+        url = reverse('api:authors-detail', args=[self.author_ru.pk])
+        response = self.staff_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['last_name'], self.author_ru.last_name)
+
+    def test_staff_can_list_author(self):
+        url = reverse('api:authors-list')
+        response = self.staff_client.get(url)
+
+        item = response.data[1]
+        obj = Author.objects.get(pk=item['id'])
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(obj.last_name, item['last_name'])
+
+    def test_staff_can_create_author(self):
+        url = reverse('api:authors-list')
+
+        response = self.staff_client.post(url, data=self.test_author_data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Author.objects.count(), self.authors_count + 1)
+
+        Author.objects.filter(
+            last_name=self.test_author_data['last_name']).delete()
+
+    def test_staff_can_partial_update_author(self):
+        author = Author.objects.create(**self.test_author_data)
+
+        url = reverse('api:authors-detail', args=[author.pk])
+        data = {'middle_name': 'Михалыч'}
+
+        response = self.staff_client.patch(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            Author.objects.get(pk=author.pk).middle_name, data['middle_name'])
+
+        author.delete()
+
+    def test_staff_can_update_author(self):
+        author = Author.objects.create(**self.test_author_data)
+
+        url = reverse('api:authors-detail', args=[author.pk])
+        data = self.test_author_data
+        data['middle_name'] = 'Михалыч'
+
+        response = self.staff_client.put(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            Author.objects.get(pk=author.pk).middle_name, data['middle_name'])
+
+        author.delete()
+
+    def test_staff_can_delete_author(self):
+        author = Author.objects.create(**self.test_author_data)
+
+        url = reverse('api:authors-detail', args=[author.pk])
+
+        response = self.staff_client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Author.objects.count(), self.authors_count)
+        self.assertEqual(Author.objects.filter(pk=author.pk).count(), 0)
+
+        author.delete()
+
+    def test_user_can_read_author(self):
+        url = reverse('api:authors-detail', args=[self.author_ru.pk])
+        response = self.user_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['last_name'], self.author_ru.last_name)
+
+    def test_user_can_list_author(self):
+        url = reverse('api:authors-list')
+        response = self.user_client.get(url)
+
+        item = response.data[1]
+        obj = Author.objects.get(pk=item['id'])
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(obj.last_name, item['last_name'])
+
+    def test_user_cant_create_author(self):
+        url = reverse('api:authors-list')
+
+        response = self.user_client.post(url, data=self.test_author_data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Author.objects.count(), self.authors_count)
+
+    def test_user_cant_partial_update_author(self):
+        author = Author.objects.create(**self.test_author_data)
+
+        url = reverse('api:authors-detail', args=[author.pk])
+        data = {'first_name': 'Петр'}
+
+        response = self.user_client.patch(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotEqual(
+            Author.objects.get(pk=author.pk).first_name, data['first_name'])
+
+        author.delete()
+
+    def test_user_cant_update_author(self):
+        author = Author.objects.create(**self.test_author_data)
+
+        url = reverse('api:authors-detail', args=[author.pk])
+        data = {'first_name': 'Петр'}
+
+        response = self.user_client.put(url, data=data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotEqual(
+            Author.objects.get(pk=author.pk).first_name, data['first_name'])
+
+        author.delete()
+
+    def test_user_cant_delete_author(self):
+        author = Author.objects.create(**self.test_author_data)
+
+        url = reverse('api:authors-detail', args=[author.pk])
+
+        response = self.user_client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Author.objects.count(), self.authors_count + 1)
+        self.assertEqual(Author.objects.filter(pk=author.pk).count(), 1)
+
+        author.delete()
