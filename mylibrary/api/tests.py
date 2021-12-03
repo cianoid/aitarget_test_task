@@ -277,6 +277,26 @@ class APITests(APITestCase, URLPatternsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], self.book_ru_from_future.name)
 
+    def test_staff_can_search_book(self):
+        reversed = reverse('api:books-list')
+
+        url = '{}?search={}'.format(reversed, 'толстой,война')
+
+        response = self.staff_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        url = '{}?search={}'.format(reversed, 'Толстой')
+        response = self.staff_client.get(url)
+
+        item = response.data[0]
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(
+            Book.objects.get(pk=item['id']).name, item['name'])
+
     def test_staff_can_list_book(self):
         url = reverse('api:books-list')
         response = self.staff_client.get(url)
@@ -363,6 +383,26 @@ class APITests(APITestCase, URLPatternsTestCase):
         response = self.user_client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_user_can_search_book(self):
+        reversed = reverse('api:books-list')
+
+        url = '{}?search={}'.format(reversed, 'толстой,война')
+
+        response = self.user_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+        url = '{}?search={}'.format(reversed, 'Толстой')
+        response = self.user_client.get(url)
+
+        item = response.data[0]
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(
+            Book.objects.get(pk=item['id']).name, item['name'])
 
     def test_user_can_list_book(self):
         url = reverse('api:books-list')
