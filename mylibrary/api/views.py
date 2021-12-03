@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from rest_framework import viewsets, permissions, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from core.email import send_email_using_bcc
 
 from api.permissions import AdminWriteAccessPermission
@@ -21,8 +22,9 @@ class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     permission_classes = [AdminWriteAccessPermission,
                           permissions.IsAuthenticated]
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name', 'author__last_name', 'author__first_name')
+    filter_backends = (filters.SearchFilter, DjangoFilterBackend)
+    search_fields = ('@name', '@author__last_name', '@author__first_name')
+    filterset_fields = ('language', 'author')
 
     def get_queryset(self):
         if self.request.user.is_staff:
