@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, mixins
 from django_filters.rest_framework import DjangoFilterBackend
 from core.email import send_email_using_bcc
 
-from api.permissions import AdminWriteAccessPermission
+from api.permissions import AdminWriteAccessPermission, DataAccessPermission
 from api.serializers import (AuthorSerializer, BookSerializer,
                              FollowSerializer, LanguageSerializer)
 from library.models import Author, Book, Follow, Language
@@ -61,9 +61,17 @@ class BookViewSet(viewsets.ModelViewSet):
             recipient_list=[follower.user.email for follower in followers])
 
 
-class FollowViewSet(viewsets.ModelViewSet):
+class FollowViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin,
+                    mixins.ListModelMixin, mixins.DestroyModelMixin,
+                    mixins.RetrieveModelMixin):
     queryset = Follow.objects.all()
     serializer_class = FollowSerializer
+    permission_classes = (DataAccessPermission, permissions.IsAuthenticated)
+    filter_backends = (DjangoFilterBackend, )
+    filterset_fields = ('user', 'author')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class LanguageViewSet(viewsets.ModelViewSet):
