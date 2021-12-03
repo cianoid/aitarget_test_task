@@ -1,9 +1,12 @@
 from datetime import datetime
 
 from rest_framework import status
+from django.core import mail
 from rest_framework.reverse import reverse
 from django.urls import include, path
 from rest_framework.test import APITestCase, URLPatternsTestCase, APIClient
+
+from django.shortcuts import get_object_or_404
 
 from django.contrib.auth import get_user_model
 
@@ -97,6 +100,7 @@ class APITests(APITestCase, URLPatternsTestCase):
         Book.objects.all().delete()
         Author.objects.all().delete()
         Language.objects.all().delete()
+        Follow.objects.all().delete()
 
     def setUp(self):
         self.user_client = APIClient()
@@ -617,3 +621,127 @@ class APITests(APITestCase, URLPatternsTestCase):
         self.assertEqual(Author.objects.filter(pk=author.pk).count(), 1)
 
         author.delete()
+
+    def test_user_can_follow_author(self):
+        url = reverse('api:follows-list')
+
+        response = self.user_client.post(url, {'author': self.author_ru.pk})
+
+        following = get_object_or_404(Follow, user=self.user)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Follow.objects.count(), 1)
+
+        following.delete()
+
+    def test_user_can_list_follows(self):
+        f1 = Follow.objects.create(user=self.user, author=self.author_ru)
+        f2 = Follow.objects.create(user=self.user, author=self.author_en)
+        f3 = Follow.objects.create(user=self.user, author=self.author_fr)
+
+        url = reverse('api:follows-list')
+
+        response = self.user_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+
+        f1.delete()
+        f2.delete()
+        f3.delete()
+
+    def test_user_can_unfollow_author(self):
+        following = Follow.objects.create(
+            user=self.user, author=self.author_ru)
+
+        url = reverse('api:follows-detail', args=[following.pk])
+
+        response = self.user_client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Follow.objects.filter(user=self.user).exists())
+
+    def test_user_can_read_following(self):
+        following = Follow.objects.create(
+            user=self.user, author=self.author_ru)
+
+        url = reverse('api:follows-detail', args=[following.pk])
+
+        response = self.user_client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user'], self.user.pk)
+
+        following.delete()
+
+    def test_user_cant_update_following(self):
+        following = Follow.objects.create(
+            user=self.user, author=self.author_ru)
+
+        url = reverse('api:follows-detail', args=[following.pk])
+
+        response = self.user_client.put(url, {'author': self.author_fr.pk})
+
+        self.assertEqual(
+            response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(
+            Follow.objects.get(pk=following.pk).author, self.author_ru)
+
+        following.delete()
+
+    def test_user_cant_partial_update_following(self):
+        following = Follow.objects.create(
+            user=self.user, author=self.author_ru)
+
+        url = reverse('api:follows-detail', args=[following.pk])
+
+        response = self.user_client.patch(url, {'author': self.author_fr.pk})
+
+        self.assertEqual(
+            response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(
+            Follow.objects.get(pk=following.pk).author, self.author_ru)
+
+        following.delete()
+
+    def test_user_cant_unfollow_others_followings(self):
+        others_following = Follow.objects.create(
+            user=self.staff, author=self.author_en)
+
+        url = reverse('api:follows-detail', args=[others_following.pk])
+
+        response = self.user_client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Follow.objects.filter(pk=others_following.pk).exists())
+
+        others_following.delete()
+
+    def test_email_send_after_book_add(self):
+        following = Follow.objects.create(
+            user=self.user, author=self.author_en)
+
+        book_name = 'Test book'
+        mail_subject = f'Доступна книга "{book_name}" ({self.author_en})'
+
+        book_add_url = reverse('api:books-list')
+        book_add_data = {
+            'name': book_name,
+            'language': self.lang_en.pk,
+            'author': self.author_en.pk,
+            'publication_year': 2020
+        }
+
+        response = self.staff_client.post(book_add_url, book_add_data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, mail_subject)
+
+        book_add_data['author'] = self.author_ru.pk
+        response = self.staff_client.post(book_add_url, book_add_data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(mail.outbox), 1)
+
+        following.delete()
