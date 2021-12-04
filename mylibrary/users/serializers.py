@@ -1,4 +1,4 @@
-from djoser.serializers import (UserCreateSerializer, UserSerializer)
+from djoser.serializers import UserCreateSerializer, UserSerializer
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):

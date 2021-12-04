@@ -1,14 +1,12 @@
 from datetime import datetime
 
-from rest_framework import status
-from django.core import mail
-from rest_framework.reverse import reverse
-from django.urls import include, path
-from rest_framework.test import APITestCase, URLPatternsTestCase, APIClient
-
-from django.shortcuts import get_object_or_404
-
 from django.contrib.auth import get_user_model
+from django.core import mail
+from django.shortcuts import get_object_or_404
+from django.urls import include, path
+from rest_framework import status
+from rest_framework.reverse import reverse
+from rest_framework.test import APIClient, APITestCase, URLPatternsTestCase
 
 from library.models import Author, Book, Follow, Language
 
@@ -101,6 +99,7 @@ class APITests(APITestCase, URLPatternsTestCase):
         Author.objects.all().delete()
         Language.objects.all().delete()
         Follow.objects.all().delete()
+        User.objects.all().delete()
 
     def setUp(self):
         self.user_client = APIClient()

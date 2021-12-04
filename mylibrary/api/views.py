@@ -1,27 +1,27 @@
 from datetime import datetime
 
-from rest_framework import viewsets, permissions, filters, mixins
 from django_filters.rest_framework import DjangoFilterBackend
-from core.email import send_email_using_bcc
+from rest_framework import filters, mixins, permissions, viewsets
 
 from api.permissions import AdminWriteAccessPermission, DataAccessPermission
 from api.serializers import (AuthorSerializer, BookSerializer,
                              FollowSerializer, LanguageSerializer)
+from core.email import send_email_using_bcc
 from library.models import Author, Book, Follow, Language
 
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
-    permission_classes = [AdminWriteAccessPermission,
-                          permissions.IsAuthenticated]
+    permission_classes = (AdminWriteAccessPermission,
+                          permissions.IsAuthenticated)
 
 
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
-    permission_classes = [AdminWriteAccessPermission,
-                          permissions.IsAuthenticated]
+    permission_classes = (AdminWriteAccessPermission,
+                          permissions.IsAuthenticated)
     filter_backends = (filters.SearchFilter, DjangoFilterBackend)
     search_fields = ('@name', '@author__last_name', '@author__first_name')
     filterset_fields = ('language', 'author')
@@ -77,5 +77,5 @@ class FollowViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin,
 class LanguageViewSet(viewsets.ModelViewSet):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
-    permission_classes = [AdminWriteAccessPermission,
-                          permissions.IsAuthenticated]
+    permission_classes = (AdminWriteAccessPermission,
+                          permissions.IsAuthenticated)

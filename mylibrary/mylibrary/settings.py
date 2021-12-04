@@ -162,4 +162,3 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 ADMINS = [
     ('admin', os.getenv('EMAIL_ADMIN')),
 ]
-
