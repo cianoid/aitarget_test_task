@@ -3,80 +3,114 @@
 Проект позволяет вести библиотеку книг авторов и организовывать 
 подписки на них
 
-# Подготовка к тестированию проекта
-## Подготовить БД к работе
-```
-CREATE USER {DB_USER} 
-    WITH PASSWORD {DB_PASSWORD};
-
-ALTER ROLE {DB_USER} 
-    SET client_encoding TO 'utf8';
-
-ALTER ROLE {DB_USER} 
-    SET default_transaction_isolation TO 'read committed';
-
-ALTER ROLE {DB_USER} 
-    SET timezone TO 'GMT+3';
-
-CREATE DATABASE {DB_NAME} with 
-    ENCODING='UTF-8' 
-    LC_COLLATE='ru_RU.UTF-8' 
-    LC_CTYPE='ru_RU.UTF-8';
-
-CREATE DATABASE {DB_TEST_NAME} with 
-    ENCODING='UTF-8' 
-    LC_COLLATE='ru_RU.UTF-8' 
-    LC_CTYPE='ru_RU.UTF-8';
-
-GRANT ALL PRIVILEGES ON DATABASE 
-    {DB_NAME}, {DB_TEST_NAME} to {DB_USER};  
-```
-
-## Склонировать и запустить проект
+# Клонирование проекта
 
 ```
-git clone git@github.com:cianoid/aitarget_test_task.git
+git clone https://github.com/cianoid/aitarget_test_task.git
 cd aitarget_test_task
-python3.7 -m venv venv
-source venv/bin/activate
-python manage.py migrate
 ```
 
-## Запуск тестов
+# Запуск проекта
+
+Есть два контейнера:
+* dev (запускается dev-сервер + postgresql)
+* production (gunicorn + nginx + postrgresql)
+
+## dev-контейнер
+
+### .env
+Создать файл .env в папке проекта (aitarget_test_task) по шаблону.
+Необходимо заполнить недостающие данные
 
 ```
-python manage.py test --keepdb
-```
-
-# Запуск проекта в Docker-контейенере
-
-## .env
-Создать .env-файл в папке проекта (aitarget_test_task) по шаблону
-
-``` 
-DEBUG=0
+DEBUG=1
 ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
 SECRET_KEY=
-POSTGRES_DB_TEST=
-POSTGRES_DB=
-POSTGRES_USER=
+POSTGRES_DB=mylibrary
+POSTGRES_USER=mylibrary_user
 POSTGRES_PASSWORD=
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
+DATABASE=postgres
+LC_COLLATE=ru_RU.UTF-8
+LC_CTYPE=ru_RU.UTF-8
 EMAIL_HOST=
 EMAIL_PORT=
 EMAIL_HOST_USER=
 EMAIL_HOST_PASSWORD=
 EMAIL_ADMIN=
-EMAIL_TIMEOUT=60
+EMAIL_TIMEOUT=
 EMAIL_USE_TLS=
+```
+
+### Сборка и запуск (миграции выполнятся автоматически)
+```
+docker-compose -f docker-compose.dev.yml up -d --build
+docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperuser
+```
+
+### Запуск тестов
+
+```
+docker-compose -f docker-compose.dev.yml exec web python manage.py test --keepdb
+```
+
+### API
+
+Документация: http://localhost:8000/redoc/
+
+Для авторизации, нужно в заголовке передавать следующее:
+```
+Bearer {{access}}
+```
+
+## production-контейнер
+
+### .env.prod
+Создать файл .env.prod в папке проекта (aitarget_test_task) по шаблону.
+Необходимо заполнить недостающие данные
+
+```
+DEBUG=1
+ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+SECRET_KEY=
+POSTGRES_DB=mylibrary
+POSTGRES_USER=mylibrary_user
+POSTGRES_PASSWORD=
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
 DATABASE=postgres
 LC_COLLATE=ru_RU.UTF-8
 LC_CTYPE=ru_RU.UTF-8
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_ADMIN=
+EMAIL_TIMEOUT=
+EMAIL_USE_TLS=
 ```
+
 
 ## Собрать и запустить контейнер 
 
 ```
 docker-compose up -d --build 
 ```
+
+### Запуск миграций, сборка статики и созданию админа
+```
+docker-compose -f docker-compose.dev.yml exec web python manage.py migrate
+docker-compose -f docker-compose.dev.yml exec web python manage.py collectstatic
+docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperuser
+```
+
+### API
+
+Документация: http://localhost/redoc/
+
+Для авторизации, нужно в заголовке передавать следующее:
+```
+Bearer {{access}}
+```
+
