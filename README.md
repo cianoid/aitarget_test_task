@@ -3,8 +3,8 @@
 Проект позволяет вести библиотеку книг авторов и организовывать 
 подписки на них
 
-# Подготовка в запуску проекта
-
+# Подготовка к тестированию проекта
+## Подготовить БД к работе
 ```
 CREATE USER {DB_USER} 
     WITH PASSWORD {DB_PASSWORD};
@@ -32,7 +32,7 @@ GRANT ALL PRIVILEGES ON DATABASE
     {DB_NAME}, {DB_TEST_NAME} to {DB_USER};  
 ```
 
-# Запуск проекта
+## Склонировать и запустить проект
 
 ```
 git clone git@github.com:cianoid/aitarget_test_task.git
@@ -42,8 +42,41 @@ source venv/bin/activate
 python manage.py migrate
 ```
 
-# Запуск тестов
+## Запуск тестов
 
 ```
 python manage.py test --keepdb
+```
+
+# Запуск проекта в Docker-контейенере
+
+## .env
+Создать .env-файл в папке проекта (aitarget_test_task) по шаблону
+
+``` 
+DEBUG=0
+ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+SECRET_KEY=
+POSTGRES_DB_TEST=
+POSTGRES_DB=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_ADMIN=
+EMAIL_TIMEOUT=60
+EMAIL_USE_TLS=
+DATABASE=postgres
+LC_COLLATE=ru_RU.UTF-8
+LC_CTYPE=ru_RU.UTF-8
+```
+
+## Собрать и запустить контейнер 
+
+```
+docker-compose up -d --build 
 ```
