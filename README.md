@@ -100,9 +100,9 @@ docker-compose up -d --build
 
 ### Запуск миграций, сборка статики и созданию админа
 ```
-docker-compose -f docker-compose.dev.yml exec web python manage.py migrate
-docker-compose -f docker-compose.dev.yml exec web python manage.py collectstatic
-docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperuser
+docker-compose exec web python manage.py migrate
+docker-compose exec web python manage.py collectstatic
+docker-compose exec web python manage.py createsuperuser
 ```
 
 ### API
