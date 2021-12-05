@@ -25,10 +25,10 @@ cd aitarget_test_task
 ```
 DEBUG=1
 ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
-SECRET_KEY=
+SECRET_KEY=secret-django-key
 POSTGRES_DB=mylibrary
 POSTGRES_USER=mylibrary_user
-POSTGRES_PASSWORD=
+POSTGRES_PASSWORD=mylibrary_password
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 DATABASE=postgres
@@ -73,10 +73,10 @@ Bearer {{access}}
 ```
 DEBUG=1
 ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
-SECRET_KEY=
+SECRET_KEY=secret-django-key
 POSTGRES_DB=mylibrary
 POSTGRES_USER=mylibrary_user
-POSTGRES_PASSWORD=
+POSTGRES_PASSWORD=mylibrary_password
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 DATABASE=postgres
