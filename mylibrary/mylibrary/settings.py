@@ -14,9 +14,12 @@ load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = int(os.getenv("DEBUG"))
+try:
+    DEBUG = int(os.environ.get('DEBUG', default=0))
+except ValueError:
+    DEBUG = 0
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(" ")
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(" ")
 
 # Application definition
 
@@ -78,10 +81,6 @@ DATABASES = {
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
         'HOST': os.getenv('POSTGRES_HOST'),
         'PORT': os.getenv('POSTGRES_PORT'),
-        'TEST': {
-            'CHARSET': 'utf8',
-            'NAME': os.getenv('POSTGRES_DB_TEST'),
-        }
     }}
 
 # Password validation
@@ -155,10 +154,14 @@ EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_PORT = os.getenv('EMAIL_PORT')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-EMAIL_USE_TLS = int(os.getenv("EMAIL_USE_TLS"))
 EMAIL_TIMEOUT = os.getenv('EMAIL_TIMEOUT')
 SERVER_EMAIL = EMAIL_HOST_USER
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+try:
+    EMAIL_USE_TLS = int(os.getenv('EMAIL_USE_TLS'))
+except ValueError:
+    EMAIL_USE_TLS = 0
 
 ADMINS = [
     ('admin', os.getenv('EMAIL_ADMIN')),
