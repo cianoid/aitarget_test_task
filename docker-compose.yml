@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  web:
+    # Берем Dockerfile из каталога aitarget_test_task
+    build: ./mylibrary
+    # Запускаем тестовый сервер
+    command: python manage.py runserver 0.0.0.0:8000
+    # куда будут помещены данные из каталога aitarget_test_task
+    volumes:
+      - ./:/usr/src/app/
+    # Открываем порт 8000 внутри и снаружи
+    ports:
+      - 8000:8000
+    # Файл содержащий переменные для контейнера
+    env_file:
+      - ./.env
+  db:
+    # Образ и версия базы, которую мы будем использовать
+    image: postgres:13.0-alpine
+    # Внешний том(volume) и место где он будет подключен внутри контейнера
+    volumes:
+      - postgres_volume:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+volumes:
+  postgres_volume:
