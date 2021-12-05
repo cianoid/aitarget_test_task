@@ -71,7 +71,7 @@ Bearer {{access}}
 Необходимо заполнить недостающие данные
 
 ```
-DEBUG=1
+DEBUG=0
 ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
 SECRET_KEY=secret-django-key
 POSTGRES_DB=mylibrary
